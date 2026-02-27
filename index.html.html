@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+  <title>Finance Flow · professional tracker</title>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <!-- Font Awesome 6 (free) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      transition: background-color 0.2s ease, border-color 0.2s, color 0.1s;
+    }
+
+    /* LIGHT / DARK variables - professional cool tones */
+    :root {
+      --bg: #f4f7fb;
+      --surface: #ffffff;
+      --text-primary: #1e2b3c;
+      --text-secondary: #4a5b6e;
+      --border: #d9e2ef;
+      --accent: #1f5f8b;
+      --accent-light: #e2ebf4;
+      --income: #2d7a4b;      /* green for income */
+      --expense: #c74553;      /* red for expense */
+      --card-shadow: 0 12px 28px rgba(0,0,0,0.04), 0 2px 8px rgba(0,20,40,0.04);
+      --chart-grid: #cad4e0;
+    }
+
+    body.dark {
+      --bg: #121a25;
+      --surface: #1f2a38;
+      --text-primary: #eef3fc;
+      --text-secondary: #b6c5da;
+      --border: #2f3e54;
+      --accent: #3f82b5;
+      --accent-light: #293847;
+      --income: #42b37e;       /* brighter green in dark */
+      --expense: #ec6a78;       /* brighter red */
+      --card-shadow: 0 12px 30px rgba(0,0,0,0.6);
+      --chart-grid: #35475f;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px;
+    }
+
+    .app-wrapper {
+      width: 100%;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    /* LOGIN CARD */
+    .login-container {
+      max-width: 440px;
+      margin: 2rem auto;
+    }
+
+    .glass-card {
+      background: var(--surface);
+      border-radius: 36px;
+      padding: 2.2rem 2rem;
+      box-shadow: var(--card-shadow);
+      border: 1px solid var(--border);
+      backdrop-filter: blur(2px);
+    }
+
+    .title-section {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 2rem;
+    }
+
+    .brand {
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      background: linear-gradient(150deg, var(--accent), #4f8fbb);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .brand i {
+      background: none;
+      -webkit-text-fill-color: var(--accent);
+      margin-right: 6px;
+    }
+
+    .mode-toggle {
+      background: var(--accent-light);
+      border: none;
+      color: var(--text-primary);
+      font-size: 1.5rem;
+      width: 48px;
+      height: 48px;
+      border-radius: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      border: 1px solid var(--border);
+    }
+
+    .input-group {
+      margin-bottom: 1.5rem;
+    }
+    .input-group label {
+      display: block;
+      font-weight: 500;
+      margin-bottom: 6px;
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+    .input-field {
+      width: 100%;
+      padding: 14px 20px;
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: 30px;
+      font-size: 1rem;
+      color: var(--text-primary);
+      outline: none;
+    }
+    .input-field:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(31,95,139,0.15);
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+      font-weight: 600;
+      padding: 14px 24px;
+      border: none;
+      border-radius: 40px;
+      font-size: 1.1rem;
+      width: 100%;
+      cursor: pointer;
+      box-shadow: 0 8px 18px rgba(31,95,139,0.25);
+      transition: 0.1s;
+    }
+    .btn-primary:hover { opacity: 0.9; transform: scale(1.01); }
+
+    .btn-secondary {
+      background: transparent;
+      border: 1.5px solid var(--border);
+      color: var(--text-primary);
+      padding: 10px 20px;
+      border-radius: 40px;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* DASHBOARD (hidden by default) */
+    .dashboard {
+      display: none;
+    }
+
+    /* header + logout */
+    .dashboard-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .header-left h1 {
+      font-size: 1.9rem;
+      font-weight: 600;
+      letter-spacing: -0.5px;
+      background: linear-gradient(145deg, var(--accent), #5fa3d6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .logout-btn {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      color: var(--text-secondary);
+      padding: 12px 22px;
+      border-radius: 40px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: 0.1s;
+    }
+    .logout-btn:hover {
+      border-color: var(--expense);
+      color: var(--expense);
+    }
+
+    /* balance strip */
+    .balance-strip {
+      background: var(--surface);
+      border-radius: 32px;
+      padding: 1.8rem 2rem;
+      margin-bottom: 24px;
+      box-shadow: var(--card-shadow);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      border: 1px solid var(--border);
+    }
+    .balance h3 {
+      font-size: 1rem;
+      font-weight: 400;
+      color: var(--text-secondary);
+    }
+    .balance .amount {
+      font-size: 3.2rem;
+      font-weight: 700;
+      line-height: 1.1;
+      color: var(--text-primary);
+    }
+    .filter-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .date-filter {
+      display: flex;
+      gap: 8px;
+      background: var(--bg);
+      padding: 6px 12px;
+      border-radius: 48px;
+      border: 1px solid var(--border);
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .date-filter input {
+      background: transparent;
+      border: none;
+      color: var(--text-primary);
+      padding: 8px 4px;
+      font-family: inherit;
+    }
+
+    /* summary cards */
+    .row-cards {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin-bottom: 28px;
+    }
+    .card {
+      background: var(--surface);
+      border-radius: 28px;
+      padding: 1.5rem 2rem;
+      flex: 1 1 200px;
+      border: 1px solid var(--border);
+      box-shadow: var(--card-shadow);
+    }
+    .card .label {
+      color: var(--text-secondary);
+      font-weight: 500;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card .value {
+      font-size: 2.3rem;
+      font-weight: 700;
+      margin-top: 8px;
+    }
+    .income-value { color: var(--income); }
+    .expense-value { color: var(--expense); }
+
+    /* double chart row */
+    .charts-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    .chart-card {
+      background: var(--surface);
+      border-radius: 30px;
+      padding: 1.5rem;
+      flex: 1 1 300px;
+      border: 1px solid var(--border);
+      box-shadow: var(--card-shadow);
+    }
+    .chart-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+    .chart-container {
+      position: relative;
+      height: 200px;
+      width: 100%;
+    }
+    canvas { max-width: 100%; height: auto !important; }
+
+    /* transaction form */
+    .form-panel {
+      background: var(--surface);
+      border-radius: 32px;
+      padding: 1.8rem;
+      margin-bottom: 28px;
+      border: 1px solid var(--border);
+    }
+    .flex-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: flex-end;
+    }
+    .field-group { flex: 1 1 160px; }
+    .field-group label {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+    }
+    .radio-group {
+      display: flex;
+      gap: 20px;
+      background: var(--bg);
+      padding: 8px 18px;
+      border-radius: 36px;
+      border: 1px solid var(--border);
+    }
+    .radio-group label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-primary);
+    }
+
+    /* transaction list */
+    .transactions-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 28px 0 16px;
+    }
+    .transaction-list {
+      background: var(--surface);
+      border-radius: 28px;
+      padding: 0.2rem 0.8rem;
+      border: 1px solid var(--border);
+    }
+    .transaction-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 1.2rem;
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .transaction-item:last-child { border-bottom: none; }
+    .tx-left { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
+    .tx-desc { font-weight: 600; font-size: 1.1rem; }
+    .tx-date {
+      color: var(--text-secondary);
+      background: var(--bg);
+      padding: 4px 12px;
+      border-radius: 40px;
+      font-size: 0.85rem;
+    }
+    .tx-amount { font-weight: 700; font-size: 1.2rem; }
+    .income-amount { color: var(--income); }
+    .expense-amount { color: var(--expense); }
+    .tx-actions button {
+      background: transparent;
+      border: none;
+      font-size: 1.2rem;
+      margin: 0 6px;
+      cursor: pointer;
+      color: var(--text-secondary);
+    }
+    .tx-actions button:hover { color: var(--accent); }
+
+    /* mobile fine-tune */
+    @media (max-width: 600px) {
+      .balance-strip { flex-direction: column; align-items: start; }
+      .date-filter { width: 100%; }
+      .flex-row { flex-direction: column; }
+      .header-left h1 { font-size: 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+<div class="app-wrapper" id="appWrapper">
+  <!-- LOGIN VIEW -->
+  <div id="loginView" class="login-container">
+    <div class="glass-card">
+      <div class="title-section">
+        <span class="brand"><i class="fas fa-chart-line"></i> Finance Flow</span>
+        <button class="mode-toggle" id="darkModeToggleLogin"><i class="fas fa-moon"></i></button>
+      </div>
+      <div class="input-group">
+        <label>Username</label>
+        <input type="text" id="username" class="input-field" placeholder="" value="">
+      </div>
+      <div class="input-group">
+        <label>Password</label>
+        <input type="password" id="password" class="input-field" placeholder="" value="">
+      </div>
+      <button class="btn-primary" id="loginBtn"><i class="fas fa-sign-in-alt"></i> Access dashboard</button>
+      <div style="margin-top:1.2rem; text-align:center; color:var(--text-secondary);">🎀WELCOME🎀</div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD VIEW -->
+  <div id="dashboardView" class="dashboard">
+    <!-- header with logout -->
+    <div class="dashboard-header">
+      <div class="header-left">
+        <h1><i class="fas fa-wave-square" style="color:var(--accent);"></i>Finance Flow</h1>
+        <button class="mode-toggle" id="darkModeToggleDash"><i class="fas fa-moon"></i></button>
+      </div>
+      <button class="logout-btn" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</button>
+    </div>
+
+    <!-- balance + filter -->
+    <div class="balance-strip">
+      <div class="balance">
+        <h3><i class="fas fa-scale-balanced"></i> NET BALANCE</h3>
+        <div class="amount" id="balanceDisplay">0</div>
+      </div>
+      <div class="filter-actions">
+        <div class="date-filter">
+          <i class="fas fa-calendar"></i>
+          <input type="date" id="filterFrom"> <span>—</span>
+          <input type="date" id="filterTo">
+          <button class="btn-secondary" style="padding:8px 14px;" id="applyFilter"><i class="fas fa-filter"></i></button>
+          <button class="btn-secondary" style="padding:8px 14px;" id="lastMonthBtn"><i class="fas fa-clock"></i> 1M</button>
+        </div>
+        <button class="btn-secondary" id="resetFilter"><i class="fas fa-undo"></i> reset</button>
+      </div>
+    </div>
+
+    <!-- income/expense cards (green/red) -->
+    <div class="row-cards">
+      <div class="card"><span class="label"><i class="fas fa-circle-up" style="color:var(--income);"></i> INCOME</span><div class="value income-value" id="totalIncome">0</div></div>
+      <div class="card"><span class="label"><i class="fas fa-circle-down" style="color:var(--expense);"></i> EXPENSE</span><div class="value expense-value" id="totalExpense">0</div></div>
+    </div>
+
+    <!-- BAR + PIE CHARTS (green/red) -->
+    <div class="charts-row">
+      <!-- bar chart card -->
+      <div class="chart-card">
+        <div class="chart-title"><i class="fas fa-chart-bar" style="color:var(--accent);"></i> last 30 days (income/expense)</div>
+        <div class="chart-container">
+          <canvas id="barChart"></canvas>
+        </div>
+      </div>
+      <!-- pie chart card -->
+      <div class="chart-card">
+        <div class="chart-title"><i class="fas fa-chart-pie" style="color:var(--accent);"></i> total income vs expense</div>
+        <div class="chart-container">
+          <canvas id="pieChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- add transaction form -->
+    <div class="form-panel">
+      <h3 style="margin-bottom:1.5rem;"><i class="fas fa-plus-circle" style="color:var(--accent);"></i> new record</h3>
+      <div class="flex-row">
+        <div class="field-group" style="flex:2;">
+          <label>description</label>
+          <input type="text" id="descInput" class="input-field" placeholder="e.g. salary, coffee">
+        </div>
+        <div class="field-group">
+          <label>amount (numeric)</label>
+          <input type="number" id="amountInput" class="input-field" placeholder="0">
+        </div>
+        <div class="field-group">
+          <label>date</label>
+          <input type="date" id="dateInput" class="input-field">
+        </div>
+        <div class="field-group">
+          <label>type</label>
+          <div class="radio-group">
+            <label><input type="radio" name="typeRadio" value="income" checked> <i class="fas fa-circle-up" style="color:var(--income);"></i></label>
+            <label><input type="radio" name="typeRadio" value="expense"> <i class="fas fa-circle-down" style="color:var(--expense);"></i></label>
+          </div>
+        </div>
+        <button class="btn-primary" id="addTxBtn" style="flex:0.5; min-width:130px;"><i class="fas fa-check"></i> add</button>
+      </div>
+    </div>
+
+    <!-- transaction list header -->
+    <div class="transactions-header">
+      <h2><i class="fas fa-list-ul"></i> transactions</h2>
+      <span id="txCount" class="btn-secondary" style="padding:6px 18px;">0 entries</span>
+    </div>
+    <div id="transactionList" class="transaction-list"></div>
+    <div style="margin: 1rem 0 2rem; text-align:center; color:var(--text-secondary); font-size:0.9rem;">
+      <i class="fas fa-pen"></i> click edit ✏️ to modify (expense or income)
+    </div>
+  </div>
+</div>
+
+<script>
+  (function(){
+    // ---------- DATA (initial) ----------
+    let transactions = [
+      { id: 't1', desc: 'Salary March', amount: 5200, date: '2025-03-05', type: 'income' },
+      { id: 't2', desc: 'Rent', amount: 1500, date: '2025-03-01', type: 'expense' },
+      { id: 't3', desc: 'Groceries', amount: 340, date: '2025-03-10', type: 'expense' },
+      { id: 't4', desc: 'Freelance', amount: 800, date: '2025-03-15', type: 'income' },
+      { id: 't5', desc: 'Dinner', amount: 120, date: '2025-03-18', type: 'expense' },
+      { id: 't6', desc: 'Internet', amount: 90, date: '2025-03-20', type: 'expense' },
+    ];
+
+    let filterFrom = '', filterTo = '';
+    let editId = null;          // transaction id being edited
+    let barChart, pieChart;     // chart instances
+
+    // DOM elements
+    const loginView = document.getElementById('loginView');
+    const dashboardView = document.getElementById('dashboardView');
+    const loginBtn = document.getElementById('loginBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const usernameInp = document.getElementById('username');
+    const passwordInp = document.getElementById('password');
+    const darkToggleLogin = document.getElementById('darkModeToggleLogin');
+    const darkToggleDash = document.getElementById('darkModeToggleDash');
+    const balanceDisplay = document.getElementById('balanceDisplay');
+    const totalIncomeSpan = document.getElementById('totalIncome');
+    const totalExpenseSpan = document.getElementById('totalExpense');
+    const filterFromInp = document.getElementById('filterFrom');
+    const filterToInp = document.getElementById('filterTo');
+    const applyFilter = document.getElementById('applyFilter');
+    const resetFilterBtn = document.getElementById('resetFilter');
+    const lastMonthBtn = document.getElementById('lastMonthBtn');
+    const descInput = document.getElementById('descInput');
+    const amountInput = document.getElementById('amountInput');
+    const dateInput = document.getElementById('dateInput');
+    const addTxBtn = document.getElementById('addTxBtn');
+    const transactionListDiv = document.getElementById('transactionList');
+    const txCountSpan = document.getElementById('txCount');
+
+    // set default date to today
+    const today = new Date().toISOString().slice(0,10);
+    dateInput.value = today;
+
+    // ----- DARK MODE -----
+    function setTheme(theme) {
+      if (theme === 'dark') { document.body.classList.add('dark'); localStorage.setItem('nffTheme', 'dark'); }
+      else { document.body.classList.remove('dark'); localStorage.setItem('nffTheme', 'light'); }
+    }
+    function toggleTheme() { setTheme(document.body.classList.contains('dark') ? 'light' : 'dark'); }
+    darkToggleLogin.addEventListener('click', toggleTheme);
+    darkToggleDash.addEventListener('click', toggleTheme);
+    const savedTheme = localStorage.getItem('nffTheme');
+    if (savedTheme === 'dark') setTheme('dark');
+
+    // ----- LOGIN / LOGOUT -----
+    loginBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const user = usernameInp.value.trim(), pwd = passwordInp.value.trim();
+      if ((user === 'demo' && pwd === 'demo') || (user && pwd)) {
+        loginView.style.display = 'none';
+        dashboardView.style.display = 'block';
+        renderDashboard();
+      } else { alert('use demo/demo'); }
+    });
+    logoutBtn.addEventListener('click', () => {
+      dashboardView.style.display = 'none';
+      loginView.style.display = 'block';
+      editId = null;
+    });
+
+    // ----- FILTER HELPERS -----
+    function getFilteredTransactions() {
+      let filtered = transactions;
+      if (filterFrom) filtered = filtered.filter(t => t.date >= filterFrom);
+      if (filterTo) filtered = filtered.filter(t => t.date <= filterTo);
+      return filtered;
+    }
+
+    function calculateTotals(filtered) {
+      let inc = 0, exp = 0;
+      filtered.forEach(t => { if (t.type === 'income') inc += t.amount; else exp += t.amount; });
+      return { inc, exp, balance: inc - exp };
+    }
+
+    // ----- RENDER TRANSACTION LIST (with edit inline) -----
+    function renderTransactionList(filtered) {
+      if (filtered.length === 0) {
+        transactionListDiv.innerHTML = `<div class="transaction-item" style="justify-content:center;">No transactions</div>`;
+        return;
+      }
+      let html = '';
+      filtered.sort((a,b) => b.date.localeCompare(a.date)).forEach(t => {
+        if (editId === t.id) {
+          // inline edit mode
+          html += `
+            <div class="transaction-item" style="flex-wrap:wrap;">
+              <input type="text" id="editDesc_${t.id}" class="input-field" style="width:140px;" value="${t.desc}">
+              <input type="number" id="editAmt_${t.id}" class="input-field" style="width:120px;" value="${t.amount}">
+              <input type="date" id="editDate_${t.id}" class="input-field" style="width:150px;" value="${t.date}">
+              <select id="editType_${t.id}" class="input-field" style="width:120px;">
+                <option value="income" ${t.type==='income'?'selected':''}>income</option>
+                <option value="expense" ${t.type==='expense'?'selected':''}>expense</option>
+              </select>
+              <div class="tx-actions">
+                <button onclick="window.saveEdit('${t.id}')"><i class="fas fa-check" style="color:green;"></i></button>
+                <button onclick="window.cancelEdit()"><i class="fas fa-times" style="color:red;"></i></button>
+              </div>
+            </div>`;
+        } else {
+          html += `
+            <div class="transaction-item">
+              <div class="tx-left">
+                <span class="tx-desc">${t.desc}</span>
+                <span class="tx-date"><i class="far fa-calendar-alt"></i> ${t.date}</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:12px;">
+                <span class="tx-amount ${t.type==='income'?'income-amount':'expense-amount'}">${t.amount}</span>
+                <div class="tx-actions">
+                  <button onclick="window.startEdit('${t.id}')"><i class="fas fa-edit"></i></button>
+                  <button onclick="window.deleteTx('${t.id}')"><i class="fas fa-trash"></i></button>
+                </div>
+              </div>
+            </div>`;
+        }
+      });
+      transactionListDiv.innerHTML = html;
+    }
+
+    // Expose global functions for inline buttons
+    window.startEdit = (id) => { editId = id; updateUI(); };
+    window.cancelEdit = () => { editId = null; updateUI(); };
+    window.saveEdit = (id) => {
+      const newDesc = document.getElementById(`editDesc_${id}`).value.trim();
+      const newAmt = parseFloat(document.getElementById(`editAmt_${id}`).value);
+      const newDate = document.getElementById(`editDate_${id}`).value;
+      const newType = document.getElementById(`editType_${id}`).value;
+      if (!newDesc || isNaN(newAmt) || newAmt < 0 || !newDate) { alert('invalid values'); return; }
+      const index = transactions.findIndex(t => t.id === id);
+      if (index !== -1) { transactions[index] = { ...transactions[index], desc: newDesc, amount: newAmt, date: newDate, type: newType }; }
+      editId = null;
+      updateUI();
+    };
+    window.deleteTx = (id) => {
+      transactions = transactions.filter(t => t.id !== id);
+      if (editId === id) editId = null;
+      updateUI();
+    };
+
+    // ----- ADD TRANSACTION -----
+    addTxBtn.addEventListener('click', () => {
+      const desc = descInput.value.trim();
+      const amount = parseFloat(amountInput.value);
+      const date = dateInput.value;
+      const type = document.querySelector('input[name="typeRadio"]:checked').value;
+      if (!desc || isNaN(amount) || amount < 0 || !date) { alert('complete fields, amount >=0'); return; }
+      const newTx = {
+        id: Date.now() + '-' + Math.random().toString(36).substr(2,6),
+        desc, amount, date, type
+      };
+      transactions.push(newTx);
+      descInput.value = '';
+      amountInput.value = '';
+      dateInput.value = today;
+      editId = null;
+      updateUI();
+    });
+
+    // ----- FILTER EVENTs -----
+    applyFilter.addEventListener('click', () => {
+      filterFrom = filterFromInp.value;
+      filterTo = filterToInp.value;
+      updateUI();
+    });
+    resetFilterBtn.addEventListener('click', () => {
+      filterFrom = ''; filterTo = '';
+      filterFromInp.value = ''; filterToInp.value = '';
+      updateUI();
+    });
+    lastMonthBtn.addEventListener('click', () => {
+      const todayDate = new Date();
+      const oneMonthAgo = new Date(todayDate); oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+      filterFromInp.value = oneMonthAgo.toISOString().slice(0,10);
+      filterToInp.value = todayDate.toISOString().slice(0,10);
+      filterFrom = filterFromInp.value;
+      filterTo = filterToInp.value;
+      updateUI();
+    });
+
+    // ----- CHARTS (bar & pie) -----
+    function updateCharts() {
+      const filtered = getFilteredTransactions(); // use current filter for pie
+      // PIE: total income / expense (filtered)
+      const { inc, exp } = calculateTotals(filtered);
+      const pieCtx = document.getElementById('pieChart').getContext('2d');
+      if (pieChart) pieChart.destroy();
+      pieChart = new Chart(pieCtx, {
+        type: 'pie',
+        data: {
+          labels: ['Income', 'Expense'],
+          datasets: [{
+            data: [inc, exp],
+            backgroundColor: [getComputedStyle(document.body).getPropertyValue('--income').trim(), getComputedStyle(document.body).getPropertyValue('--expense').trim()],
+            borderWidth: 0,
+          }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: getComputedStyle(document.body).getPropertyValue('--text-primary') } } } }
+      });
+
+      // BAR : last 30 days (based on all transactions, but we keep visual for report)
+      const last30 = new Date(); last30.setDate(last30.getDate() - 30);
+      const cutoff = last30.toISOString().slice(0,10);
+      const last30Txs = transactions.filter(t => t.date >= cutoff);
+      const days = [...Array(30)].map((_, i) => { let d = new Date(); d.setDate(d.getDate() - i); return d.toISOString().slice(0,10); }).reverse();
+      const incomeByDay = days.map(day => last30Txs.filter(t => t.date === day && t.type === 'income').reduce((s,t) => s + t.amount, 0));
+      const expenseByDay = days.map(day => last30Txs.filter(t => t.date === day && t.type === 'expense').reduce((s,t) => s + t.amount, 0));
+
+      const barCtx = document.getElementById('barChart').getContext('2d');
+      if (barChart) barChart.destroy();
+      barChart = new Chart(barCtx, {
+        type: 'bar',
+        data: {
+          labels: days.map(d => d.slice(5)),
+          datasets: [
+            { label: 'Income', data: incomeByDay, backgroundColor: getComputedStyle(document.body).getPropertyValue('--income').trim(), borderRadius: 6 },
+            { label: 'Expense', data: expenseByDay, backgroundColor: getComputedStyle(document.body).getPropertyValue('--expense').trim(), borderRadius: 6 }
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: getComputedStyle(document.body).getPropertyValue('--text-primary') } } },
+          scales: { x: { ticks: { color: getComputedStyle(document.body).getPropertyValue('--text-secondary') } },
+                   y: { ticks: { color: getComputedStyle(document.body).getPropertyValue('--text-secondary') } } }
+        }
+      });
+    }
+
+    // ----- MAIN UPDATE -----
+    function updateUI() {
+      const filtered = getFilteredTransactions();
+      const { inc, exp, balance } = calculateTotals(filtered);
+      balanceDisplay.innerText = balance;
+      totalIncomeSpan.innerText = inc;
+      totalExpenseSpan.innerText = exp;
+      renderTransactionList(filtered);
+      updateCharts();
+      txCountSpan.innerText = filtered.length + ' entries';
+    }
+
+    function renderDashboard() { updateUI(); }
+
+    // detect theme change for charts (rough, but chart update on each UI refresh)
+    // also observe dark mode toggle -> charts will redraw with new computed colors via updateUI
+    const observer = new MutationObserver(() => updateUI());
+    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+  })();
+</script>
+</body>
+</html>
